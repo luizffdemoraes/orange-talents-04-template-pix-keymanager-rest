@@ -30,6 +30,9 @@ internal class CarregaChavePixControllerTest {
     lateinit var carregaChaveStub: KeyManagerCarregaGrpcServiceGrpc.KeyManagerCarregaGrpcServiceBlockingStub
 
     @field:Inject
+    lateinit var listaChaveStub: KeyManagerListaGrpcServiceGrpc.KeyManagerListaGrpcServiceBlockingStub
+
+    @field:Inject
     @field:Client("/")
     lateinit var client: HttpClient
 
@@ -71,13 +74,13 @@ internal class CarregaChavePixControllerTest {
                 .setChave(CHAVE_EMAIL)
                 .setConta(
                     CarregaChavePixResponse.ChavePix.ContaInfo.newBuilder()
-                    .setTipo(CONTA_CORRENTE)
-                    .setInstituicao(INSTITUICAO)
-                    .setNomeDoTitular(TITULAR)
-                    .setCpfDoTitular(DOCUMENTO_DO_TITULAR)
-                    .setAgencia(AGENCIA)
-                    .setNumeroDaConta(NUMERO_DA_CONTA)
-                    .build()
+                        .setTipo(CONTA_CORRENTE)
+                        .setInstituicao(INSTITUICAO)
+                        .setNomeDoTitular(TITULAR)
+                        .setCpfDoTitular(DOCUMENTO_DO_TITULAR)
+                        .setAgencia(AGENCIA)
+                        .setNumeroDaConta(NUMERO_DA_CONTA)
+                        .build()
                 )
                 .setCriadaEm(CHAVE_CRIADA_EM.let {
                     val createdAt = it.atZone(ZoneId.of("UTC")).toInstant()
@@ -85,14 +88,76 @@ internal class CarregaChavePixControllerTest {
                         .setSeconds(createdAt.epochSecond)
                         .setNanos(createdAt.nano)
                         .build()
-                })).build()
+                })
+            ).build()
+
+    @Test
+    internal fun `deve listar todas as chaves pix existente`() {
+
+        val clienteId = UUID.randomUUID().toString()
+
+        val respostaGrpc = listaChavePixResponse(clienteId)
+
+        given(listaChaveStub.lista(Mockito.any())).willReturn(respostaGrpc)
+
+
+        val request = HttpRequest.GET<Any>("/api/v1/clientes/$clienteId/pix/")
+        val response = client.toBlocking().exchange(request, List::class.java)
+
+        Assertions.assertEquals(HttpStatus.OK, response.status)
+        Assertions.assertNotNull(response.body())
+        Assertions.assertEquals(response.body()!!.size, 2)
+    }
+
+    private fun listaChavePixResponse(clienteId: String): ListaChavesPixResponse {
+        val chaveEmail = ListaChavesPixResponse.ChavePix.newBuilder()
+            .setPixId(UUID.randomUUID().toString())
+            .setTipo(TIPO_DE_CHAVE_EMAIL)
+            .setChave(CHAVE_EMAIL)
+            .setTipoDeConta(CONTA_CORRENTE)
+            .setCriadaEm(CHAVE_CRIADA_EM.let {
+                val createdAt = it.atZone(ZoneId.of("UTC")).toInstant()
+                Timestamp.newBuilder()
+                    .setSeconds(createdAt.epochSecond)
+                    .setNanos(createdAt.nano)
+                    .build()
+            })
+            .build()
+
+        val chaveCelular = ListaChavesPixResponse.ChavePix.newBuilder()
+            .setPixId(UUID.randomUUID().toString())
+            .setTipo(TIPO_DE_CHAVE_CELULAR)
+            .setChave(CHAVE_CELULAR)
+            .setTipoDeConta(CONTA_CORRENTE)
+            .setCriadaEm(CHAVE_CRIADA_EM.let {
+                val createdAt = it.atZone(ZoneId.of("UTC")).toInstant()
+                Timestamp.newBuilder()
+                    .setSeconds(createdAt.epochSecond)
+                    .setNanos(createdAt.nano)
+                    .build()
+            })
+            .build()
+
+
+        return ListaChavesPixResponse.newBuilder()
+            .setClienteId(clienteId)
+            .addAllChaves(listOf(chaveEmail, chaveCelular))
+            .build()
+
+    }
 
     @Factory
     @Replaces(factory = KeyManagerGrpcFactory::class)
     internal class MockitoStubFactory {
 
         @Singleton
-        fun stubDetalhesMock() = Mockito.mock(KeyManagerCarregaGrpcServiceGrpc.KeyManagerCarregaGrpcServiceBlockingStub::class.java)
+        fun stubDetalhesMock() =
+            Mockito.mock(KeyManagerCarregaGrpcServiceGrpc.KeyManagerCarregaGrpcServiceBlockingStub::class.java)
+
+
+        @Singleton
+        fun stubListaMock() =
+            Mockito.mock(KeyManagerListaGrpcServiceGrpc.KeyManagerListaGrpcServiceBlockingStub::class.java)
     }
 
 
