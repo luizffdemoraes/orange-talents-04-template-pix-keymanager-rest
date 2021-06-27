@@ -4,13 +4,17 @@ micronaut:
   server:
    port: ${SERVER_PORT:8077}
 
+# Mudança para comunicar com o arquivo grpc do docker
 grpc:
   client:
     plaintext: true
     max-retry-attempts: 10
   channels:
     keyManager:
-      address: '${KEY_MANAGER_HOST:localhost}:${KEY_MANAGER_PORT:50051}'
+      address: '${KEY_MANAGER_HOST:host.docker.internal}:${KEY_MANAGER_PORT:50051}'
+
+# Local
+#      address: '${KEY_MANAGER_HOST:localhost}:${KEY_MANAGER_PORT:50051}'
 
 ##
 # Jackson configuration
